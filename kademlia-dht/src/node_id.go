@@ -1,4 +1,4 @@
-package node_id
+package kadht
 
 import (
 	"crypto/sha1"
@@ -58,7 +58,10 @@ func commonBits(a, b NodeId) int {
 	}
 	common_bits += j
 
-	return common_bits
+	if common_bits == 0 {
+		return 0
+	}
+	return common_bits - 1
 }
 
 // Compares 2 node Id's

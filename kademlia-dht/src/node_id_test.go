@@ -1,4 +1,4 @@
-package node_id
+package kadht
 
 import (
 	"crypto/sha1"
