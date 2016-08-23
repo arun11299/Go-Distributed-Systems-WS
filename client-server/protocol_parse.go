@@ -62,7 +62,7 @@ func main() {
 
 	var pktbuf BaseMessage
 
-	// Start the cllient
+	// Start the client
 	go start_client()
 
 	fmt.Println("Server going to read")
@@ -75,7 +75,7 @@ func main() {
 	//pktbuf.magic = make([]byte, 4)
 	//io.ReadFull(uconn, pktbuf.magic)
 
-	fmt.Println("Read packet version:", pktbuf.Version)
+	fmt.Println("Rtad packet version:", pktbuf.Version)
 	fmt.Println("Read packet magic:", pktbuf.Magic)
 
 }

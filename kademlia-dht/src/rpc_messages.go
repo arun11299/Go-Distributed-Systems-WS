@@ -2,6 +2,7 @@ package kadht
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"time"
 )
@@ -28,8 +29,8 @@ const (
  *    otherwise returns 'false'
  */
 type IMessage interface {
-	Serialize(*io.Writer) bool
-	Deserialize(*io.Reader) bool
+	Serialize(io.Writer) bool
+	Deserialize(io.Reader) bool
 }
 
 /*
@@ -38,7 +39,7 @@ type IMessage interface {
 type BasicMsgHeader struct {
 	Version   uint32 // The message version. Hard coded to 1
 	MsgType   uint32 // Type of the request or response message
-	EpochTime uint32 // Time at which message was created
+	EpochTime int64  // Time at which message was created
 	SenderId  NodeId // Node ID of the sender node
 	RandomId  NodeId // Random ID for matching response with request context
 }
@@ -47,14 +48,14 @@ type BasicMsgHeader struct {
  * PingRequest
  */
 type PingRequest struct {
-	base_msg BasicMsgRequestHeader
+	base_msg BasicMsgHeader
 }
 
 /*
  * PingReply
  */
 type PingReply struct {
-	base_msg BasicMsgRequestHeader
+	base_msg BasicMsgHeader
 }
 
 /*
@@ -67,7 +68,7 @@ type PingReply struct {
  */
 func NewBasicMsgHeader(msg_type uint32, sender_id, random_id NodeId) *BasicMsgHeader {
 	if msg_type <= MSG_START && msg_type >= MSG_END {
-		panic("Received incorrect message type: ", msg_type)
+		panic("Received incorrect message type: ")
 	}
 	now := time.Now()
 
@@ -114,7 +115,7 @@ func NewPingReply(sender_id NodeId, ping_req *PingRequest) *PingReply {
  * [in] writer : An io.Writer object
  * [out] bool : Returns 'true' if serialization was successfull otherwise 'false'
  */
-func (this *BasicMsgHeader) Serialize(writer *io.Writer) bool {
+func (this *BasicMsgHeader) Serialize(writer io.Writer) bool {
 	//TODO: determine endian-ness in platform independent way.
 	err := binary.Write(writer, binary.BigEndian, this)
 	if err != nil {
@@ -131,7 +132,7 @@ func (this *BasicMsgHeader) Serialize(writer *io.Writer) bool {
  * [in] reader : An io.Reader object
  * [out] bool : Returns 'true' if de-serialization was successfull otherwise 'false'
  */
-func (this *BasicMsgHeader) Deserialize(reader *io.Reader) bool {
+func (this *BasicMsgHeader) Deserialize(reader io.Reader) bool {
 	//TODO: determine endian-ness in a platform independent way.
 	err := binary.Read(reader, binary.BigEndian, this)
 	if err != nil {
@@ -145,7 +146,7 @@ func (this *BasicMsgHeader) Deserialize(reader *io.Reader) bool {
  * Implementation of Serialize interface API for PingRequest
  * message type class
  */
-func (this *PingRequest) Serialize(writer *io.Writer) bool {
+func (this *PingRequest) Serialize(writer io.Writer) bool {
 	// Forward the serialize call to the Basic message
 	ret := this.base_msg.Serialize(writer)
 	if !ret {
@@ -158,7 +159,7 @@ func (this *PingRequest) Serialize(writer *io.Writer) bool {
  * Implementation of the Deserialize interface API for PingRequest
  * message type class
  */
-func (this *PingRequest) Deserialize(reader *io.Reader) bool {
+func (this *PingRequest) Deserialize(reader io.Reader) bool {
 	// Forward the de-serialize call to the basic message
 	ret := this.base_msg.Deserialize(reader)
 	if !ret {
@@ -171,7 +172,7 @@ func (this *PingRequest) Deserialize(reader *io.Reader) bool {
  * Implementation of Serialize interface API for PingReply
  * message type class
  */
-func (this *PingReply) Serialize(writer *io.Writer) bool {
+func (this *PingReply) Serialize(writer io.Writer) bool {
 	// Forward the serialize call to the Basic message
 	ret := this.base_msg.Serialize(writer)
 	if !ret {
@@ -183,7 +184,7 @@ func (this *PingReply) Serialize(writer *io.Writer) bool {
 /*
  * Implementation of Deserialize interface API for PingReply message type class
  */
-func (this *PingReply) Deserialize(reader *io.Reader) bool {
+func (this *PingReply) Deserialize(reader io.Reader) bool {
 	// Forward the de-serialize call to the basic message
 	ret := this.base_msg.Deserialize(reader)
 	if !ret {
