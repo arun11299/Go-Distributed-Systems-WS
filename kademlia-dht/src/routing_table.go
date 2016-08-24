@@ -12,6 +12,7 @@ const (
 	numBuckets = numBitsID
 	// Number of entries per bucket
 	entriesPerBucket = 20
+	//Number of nodes (Max capped)
 )
 
 // Represents a node in the distributed

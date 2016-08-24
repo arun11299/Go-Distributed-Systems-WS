@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"net"
 	"time"
 )
 
@@ -13,10 +14,50 @@ const (
 	// are listed here
 	PING_REQ
 	PING_RESP
+	FIND_NODE_REQ
+	FIND_VALUE_REQ
+	FIND_VALUE_RESP
+	FIND_NODE_RESP
 	// End of all message types, nothing should go beyond this
 	// Mark my words
 	MSG_END
 )
+
+func MsgType2Str(mtype int) string {
+	switch mtype {
+	case PING_REQ:
+		return "PING_REQ"
+	case PING_RESP:
+		return "PING_RESP"
+	case FIND_NODE_REQ:
+		return "FIND_NODE_REQ"
+	case FIND_VALUE_REQ:
+		return "FIND_VALUE_REQ"
+	case FIND_VALUE_RESP:
+		return "FIND_VALUE_RESP"
+	case FIND_NODE_RESP:
+		return "FIND_NODE_RESP"
+	default:
+		panic("Message Type not correct")
+	}
+}
+
+const (
+	// Max limit on the number of nodes a remote node can send
+	// in a node reply message
+	kNodes = 7
+)
+
+/*
+ * RemoteNode : Stores the minimal required information
+ * about the remote node.
+ * TODO: Need some kind of correlation with the Node
+ * present in routing_table.
+ */
+type RemoteNode struct {
+	Id   NodeId      // ID of the remote node
+	Addr net.UDPAddr // Address of the remote node
+}
 
 /*
  * Message interface that every struct implementing a
@@ -56,6 +97,31 @@ type PingRequest struct {
  */
 type PingReply struct {
 	base_msg BasicMsgHeader
+}
+
+/*
+ * FindNodeRequest
+ */
+type FindNodeRequest struct {
+	base_msg     BasicMsgHeader
+	LookupNodeId NodeId // The ID of the node that we are looking for
+}
+
+/*
+ * FindValueRequest
+ */
+type FindValueRequest struct {
+	base_msg      BasicMsgHeader
+	LookupValueId NodeId // The ID of the value taht we are looking for
+}
+
+/*
+ * FindNodeReply
+ */
+type FindNodeReply struct {
+	base_msg   BasicMsgHeader
+	TotalNodes int32        // Total number of nodes in the message
+	Nodes      []RemoteNode // List of nodes
 }
 
 /*
@@ -109,6 +175,59 @@ func NewPingReply(sender_id NodeId, ping_req *PingRequest) *PingReply {
 }
 
 /*
+ * NewFindNodeRequest : Create a new Find node request.
+ * Parameters:
+ * [in] sender_id : Node Id of the sending node.
+ * [in] lookup_id : Id of the node to lookup.
+ * [out] *FindNodeRequest : Pointer to the newly created FindNodeRequest
+ */
+func NewFindNodeRequest(sender_id, lookup_id NodeId) *FindNodeRequest {
+	return &FindNodeRequest{
+		base_msg:     *NewBasicMsgHeader(FIND_NODE_REQ, sender_id, generateRandomNodeId()),
+		LookupNodeId: lookup_id,
+	}
+}
+
+/*
+ * NewFindValueRequest : Create a new Find value request.
+ * Parameters:
+ * [in] sender_id : Node Id of the sending node.
+ * [in] lookup_id : Id of the value to lookup.
+ * [out] *FindValueRequest : Pointer to the newly created FindValueRequest
+ */
+func NewFindValueRequest(sender_id, lookup_id NodeId) *FindValueRequest {
+	return &FindValueRequest{
+		base_msg:      *NewBasicMsgHeader(FIND_VALUE_REQ, sender_id, generateRandomNodeId()),
+		LookupValueId: lookup_id,
+	}
+}
+
+/*
+ * NewFindNodeReply : Create a new Find node reply message.
+ * Parameters:
+ * [in] sender_id : Node Id of the sending node.
+ * [in] nodes : The 'k' (atmax kNodes) close nodes
+ * [in] find_node_req : The corresponding FindNodeRequest
+ * [out] *FindNodeReply : Pointer to the newly created FindNodeReply
+ */
+func NewFindNodeReply(sender_id NodeId, nodes []RemoteNode,
+	find_node_req *FindNodeRequest) *FindNodeReply {
+	if len(nodes) > kNodes {
+		fmt.Println("ERROR: More than allowed nodes present: ", len(nodes))
+		return nil
+	}
+
+	return &FindNodeReply{
+		base_msg: *NewBasicMsgHeader(FIND_VALUE_RESP, sender_id,
+			find_node_req.base_msg.RandomId),
+		TotalNodes: int32(len(nodes)),
+		Nodes:      nodes,
+	}
+}
+
+//************** MESSAGE SERIALIZATION-DESERIALIZATION FUNCTIONS ***************//
+
+/*
  * Serialize : Implementation of Serialize interface API for Basic message
  * type class
  * Parameters:
@@ -160,12 +279,8 @@ func (this *PingRequest) Serialize(writer io.Writer) bool {
  * message type class
  */
 func (this *PingRequest) Deserialize(reader io.Reader) bool {
-	// Forward the de-serialize call to the basic message
-	ret := this.base_msg.Deserialize(reader)
-	if !ret {
-		fmt.Println("ERROR: Failed to deserialize PingRequest")
-	}
-	return ret
+	// Header should have already been deserialized
+	return true
 }
 
 /*
@@ -185,10 +300,116 @@ func (this *PingReply) Serialize(writer io.Writer) bool {
  * Implementation of Deserialize interface API for PingReply message type class
  */
 func (this *PingReply) Deserialize(reader io.Reader) bool {
-	// Forward the de-serialize call to the basic message
-	ret := this.base_msg.Deserialize(reader)
+	// Header should have already been deserialized
+	return true
+}
+
+/*
+ * Implementation of Serialize interface API for FindNodeRequest
+ * message type class
+ */
+func (this *FindNodeRequest) Serialize(writer io.Writer) bool {
+	// First write the header by forwarding the call to basic message
+	ret := this.base_msg.Serialize(writer)
 	if !ret {
-		fmt.Println("ERROR: Failed to deserialize PingReply")
+		fmt.Println("ERROR: Failed to serialize FindNodeRequest header")
+		return false
 	}
-	return ret
+	// Serialize the lookup ID
+	err := binary.Write(writer, binary.BigEndian, &this.LookupNodeId)
+	if err != nil {
+		fmt.Println("ERROR: Failed to serialize FindNodeRequest LookupNodeId")
+		return false
+	}
+	return true
+}
+
+/*
+ * Implementation of Deserialize interface API for FindNodeRequest message
+ * type class
+ */
+func (this *FindNodeRequest) Deserialize(reader io.Reader) bool {
+	// Header should have already been deserialized
+	// Read the Lookup ID
+	err := binary.Read(reader, binary.BigEndian, &this.LookupNodeId)
+	if err != nil {
+		fmt.Println("ERROR: Failed to deserialize FindNodeRequest LookupNodeId")
+		return false
+	}
+	return true
+}
+
+/*
+ * Implementation of Serialize interface API for FindValueRequest
+ * message type class
+ */
+func (this *FindValueRequest) Serialize(writer io.Writer) bool {
+	// First write the header by forwarding the call to basic message
+	ret := this.base_msg.Serialize(writer)
+	if !ret {
+		fmt.Println("ERROR: Failed to serialize FindValueRequest header")
+		return false
+	}
+	// Serialize the lookup ID
+	err := binary.Write(writer, binary.BigEndian, &this.LookupValueId)
+	if err != nil {
+		fmt.Println("ERROR: Failed to serialize FindNodeRequest LookupValueId")
+		return false
+	}
+	return true
+}
+
+/*
+ * Implementation of Deserialize interface API for FindValueRequest message
+ * type class
+ */
+func (this *FindValueRequest) Deserialize(reader io.Reader) bool {
+	// Header should have already been deserialized
+	// Read the lookup ID
+	err := binary.Read(reader, binary.BigEndian, &this.LookupValueId)
+	if err != nil {
+		fmt.Println("ERROR: Failed to deserialize FindValueRequest LookupValueId")
+		return false
+	}
+	return true
+}
+
+func (this *FindNodeReply) Serialize(writer io.Writer) bool {
+	// First write the header by forwarding the call to basic message
+	ret := this.base_msg.Serialize(writer)
+	if !ret {
+		fmt.Println("ERROR: Failed to serialize FindNodeReply header")
+		return false
+	}
+	// Serialize Total nodes
+	err := binary.Write(writer, binary.BigEndian, &this.TotalNodes)
+	if err != nil {
+		fmt.Println("ERROR: Failed to serialize FindNodeReply total nodes")
+		return false
+	}
+	// Serialize the nodes
+	err = binary.Write(writer, binary.BigEndian, &this.Nodes)
+	if err != nil {
+		fmt.Println("ERROR: Failed to serialize FindNodeReply nodes")
+		return false
+	}
+	return true
+}
+
+func (this *FindNodeReply) Deserialize(reader io.Reader) bool {
+	// Header should have already been deserialized
+	// Read total nodes
+	err := binary.Read(reader, binary.BigEndian, &this.TotalNodes)
+	if err != nil {
+		fmt.Println("ERROR: Failed to deserialize FindNodeReply total nodes")
+		return false
+	}
+	// Read the nodes
+	this.Nodes = make([]RemoteNode, this.TotalNodes)
+	err = binary.Read(reader, binary.BigEndian, &this.Nodes)
+	if err != nil {
+		fmt.Println("ERROR: Failed to deserialize FindNodeReply nodes")
+		return false
+	}
+	return true
 }

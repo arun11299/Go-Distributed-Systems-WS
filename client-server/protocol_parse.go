@@ -29,7 +29,9 @@ func start_client() {
 		Magic:   [4]byte{'A', 'r', 'u', 'n'},
 	}
 
-	err = binary.Write(conn, binary.BigEndian, &(sendPkt))
+	err = binary.Write(conn, binary.BigEndian, &(sendPkt.Version))
+	err = binary.Write(conn, binary.BigEndian, &(sendPkt.Magic))
+
 	if err != nil {
 		fmt.Println("Binary write failed: ", err)
 		os.Exit(1)
@@ -66,7 +68,8 @@ func main() {
 	go start_client()
 
 	fmt.Println("Server going to read")
-	err = binary.Read(uconn, binary.BigEndian, &(pktbuf))
+	err = binary.Read(uconn, binary.BigEndian, &(pktbuf.Version))
+	err = binary.Read(uconn, binary.BigEndian, &(pktbuf.Magic))
 	if err != nil {
 		fmt.Println("Error in binary read of n/w packet ", err)
 		os.Exit(1)
