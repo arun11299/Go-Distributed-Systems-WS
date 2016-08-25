@@ -48,51 +48,39 @@ func ConsumePacket(conn net.Conn) (IMessage, int) {
 		return nil, -1
 	}
 
+	deserializer := func(msg IMessage, mtype int) (IMessage, int) {
+		ret := msg.Deserialize(resp_reader)
+		if !ret {
+			return nil, -1
+		}
+		return msg, mtype
+	}
+
 	switch header.MsgType {
 	case PING_REQ:
 		ping_req := new(PingRequest)
 		ping_req.base_msg = header
-		ret := ping_req.Deserialize(resp_reader)
-		if !ret {
-			return nil, -1
-		}
-		return ping_req, PING_REQ
+		return deserializer(ping_req, PING_REQ)
 
 	case PING_RESP:
 		ping_resp := new(PingReply)
 		ping_resp.base_msg = header
-		ret := ping_resp.Deserialize(resp_reader)
-		if !ret {
-			return nil, -1
-		}
-		return ping_resp, PING_RESP
+		return deserializer(ping_resp, PING_RESP)
 
 	case FIND_NODE_REQ:
 		find_node_req := new(FindNodeRequest)
 		find_node_req.base_msg = header
-		ret := find_node_req.Deserialize(resp_reader)
-		if !ret {
-			return nil, -1
-		}
-		return find_node_req, FIND_NODE_REQ
+		return deserializer(find_node_req, FIND_NODE_REQ)
 
 	case FIND_NODE_RESP:
 		find_node_resp := new(FindNodeReply)
 		find_node_resp.base_msg = header
-		ret := find_node_resp.Deserialize(resp_reader)
-		if !ret {
-			return nil, -1
-		}
-		return find_node_resp, FIND_NODE_RESP
+		return deserializer(find_node_resp, FIND_NODE_RESP)
 
 	case FIND_VALUE_REQ:
 		find_value_req := new(FindValueRequest)
 		find_value_req.base_msg = header
-		ret := find_value_req.Deserialize(resp_reader)
-		if !ret {
-			return nil, -1
-		}
-		return find_value_req, FIND_VALUE_REQ
+		return deserializer(find_value_req, FIND_VALUE_REQ)
 
 	default:
 		panic("Invalid message type")
