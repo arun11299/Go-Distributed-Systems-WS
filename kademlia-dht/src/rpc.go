@@ -42,7 +42,9 @@ func ReadMessageHeader(resp_reader io.Reader) (BasicMsgHeader, error) {
 func ConsumePacket(conn net.Conn) (IMessage, int) {
 	resp_reader := bufio.NewReader(conn)
 
+	fmt.Println("A:")
 	header, err := ReadMessageHeader(resp_reader)
+	fmt.Println("B:")
 	if err != nil {
 		fmt.Println("ERROR: Parsing failed")
 		return nil, -1
@@ -102,16 +104,21 @@ func SendPingRequest(conn net.Conn, server_ctx *ServerConfig) bool {
 }
 
 func SendPingResponse(conn net.Conn, ping_req *PingRequest, server_ctx *ServerConfig) bool {
-	ping_resp := NewPingReply(server_ctx.node_id, ping_req)
-	resp_writer := bufio.NewWriter(conn)
+	//m := make([]byte, 56)
+	//m[0] = 'A'
+	//conn.Write(m)
+	/*
+		ping_resp := NewPingReply(server_ctx.node_id, ping_req)
+		resp_writer := bufio.NewWriter(conn)
 
-	ret := ping_resp.Serialize(resp_writer)
-	if !ret {
-		fmt.Println("ERROR: Failed to send ping response")
-		return false
-	}
+		ret := ping_resp.Serialize(resp_writer)
+		if !ret {
+			fmt.Println("ERROR: Failed to send ping response")
+			return false
+		}
 
-	resp_writer.Flush()
+		resp_writer.Flush()
+	*/
 	return true
 }
 
@@ -131,6 +138,7 @@ func SendFindNodeRequest(conn net.Conn, lookup_id NodeId, server_ctx *ServerConf
 
 func SendFindNodeResponse(conn net.Conn, find_node_req *FindNodeRequest,
 	nodes []RemoteNode, server_ctx *ServerConfig) bool {
+
 	find_node_resp := NewFindNodeReply(server_ctx.node_id, nodes, find_node_req)
 	if find_node_resp == nil {
 		fmt.Println("ERROR: Failed to create find node reply")

@@ -48,6 +48,11 @@ const (
 	kNodes = 7
 )
 
+type Ipv4Addr struct {
+	IP   [4]byte
+	Port uint16
+}
+
 /*
  * RemoteNode : Stores the minimal required information
  * about the remote node.
@@ -55,8 +60,17 @@ const (
  * present in routing_table.
  */
 type RemoteNode struct {
-	Id   NodeId      // ID of the remote node
-	Addr net.UDPAddr // Address of the remote node
+	Id   NodeId // ID of the remote node
+	Addr Ipv4Addr
+}
+
+func NewIpv4Addr(addr *net.UDPAddr) Ipv4Addr {
+	var raddr Ipv4Addr
+	// TODO: Assume IPv4 address. Would not work
+	// properly with IPv6
+	copy(raddr.IP[:], addr.IP[0:4])
+	raddr.Port = uint16(addr.Port)
+	return raddr
 }
 
 /*
@@ -216,13 +230,19 @@ func NewFindNodeReply(sender_id NodeId, nodes []RemoteNode,
 		fmt.Println("ERROR: More than allowed nodes present: ", len(nodes))
 		return nil
 	}
+	find_node_reply := new(FindNodeReply)
 
-	return &FindNodeReply{
-		base_msg: *NewBasicMsgHeader(FIND_VALUE_RESP, sender_id,
-			find_node_req.base_msg.RandomId),
-		TotalNodes: int32(len(nodes)),
-		Nodes:      nodes,
-	}
+	find_node_reply.base_msg = *NewBasicMsgHeader(
+		FIND_VALUE_RESP,
+		sender_id,
+		find_node_req.base_msg.RandomId,
+	)
+
+	find_node_reply.TotalNodes = int32(len(nodes))
+	find_node_reply.Nodes = make([]RemoteNode, len(nodes))
+	copy(find_node_reply.Nodes[:], nodes[:len(nodes)])
+
+	return find_node_reply
 }
 
 //************** MESSAGE SERIALIZATION-DESERIALIZATION FUNCTIONS ***************//
@@ -388,10 +408,12 @@ func (this *FindNodeReply) Serialize(writer io.Writer) bool {
 		return false
 	}
 	// Serialize the nodes
-	err = binary.Write(writer, binary.BigEndian, &this.Nodes)
-	if err != nil {
-		fmt.Println("ERROR: Failed to serialize FindNodeReply nodes")
-		return false
+	for idx := range this.Nodes {
+		err = binary.Write(writer, binary.BigEndian, &this.Nodes[idx])
+		if err != nil {
+			fmt.Println("ERROR: Failed to serialize FindNodeReply remote node: ", err)
+			return false
+		}
 	}
 	return true
 }
@@ -406,10 +428,12 @@ func (this *FindNodeReply) Deserialize(reader io.Reader) bool {
 	}
 	// Read the nodes
 	this.Nodes = make([]RemoteNode, this.TotalNodes)
-	err = binary.Read(reader, binary.BigEndian, &this.Nodes)
-	if err != nil {
-		fmt.Println("ERROR: Failed to deserialize FindNodeReply nodes")
-		return false
+	for idx := range this.Nodes {
+		err = binary.Read(reader, binary.BigEndian, &this.Nodes[idx])
+		if err != nil {
+			fmt.Println("ERROR: Failed to deserialize FindNodeReply nodes")
+			return false
+		}
 	}
 	return true
 }
