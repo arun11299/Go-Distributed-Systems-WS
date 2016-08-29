@@ -83,6 +83,7 @@ func ConsumePacket(conn *net.UDPConn) (IMessage, int) {
 		return deserializer(find_value_req, FIND_VALUE_REQ)
 
 	default:
+		fmt.Println("ERROR: Invalid message type: ", header.MsgType)
 		panic("Invalid message type")
 	}
 }

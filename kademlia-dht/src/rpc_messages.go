@@ -15,15 +15,15 @@ const (
 	PING_REQ
 	PING_RESP
 	FIND_NODE_REQ
+	FIND_NODE_RESP
 	FIND_VALUE_REQ
 	FIND_VALUE_RESP
-	FIND_NODE_RESP
 	// End of all message types, nothing should go beyond this
 	// Mark my words
 	MSG_END
 )
 
-func MsgType2Str(mtype int) string {
+func MsgType2Str(mtype uint32) string {
 	switch mtype {
 	case PING_REQ:
 		return "PING_REQ"
@@ -233,7 +233,7 @@ func NewFindNodeReply(sender_id NodeId, nodes []RemoteNode,
 	find_node_reply := new(FindNodeReply)
 
 	find_node_reply.base_msg = *NewBasicMsgHeader(
-		FIND_VALUE_RESP,
+		FIND_NODE_RESP,
 		sender_id,
 		find_node_req.base_msg.RandomId,
 	)
