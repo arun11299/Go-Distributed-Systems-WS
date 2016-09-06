@@ -11,8 +11,10 @@ const (
 	// Number of buckets in the routing table
 	numBuckets = numBitsID
 	// Number of entries per bucket
-	entriesPerBucket = 20
-	//Number of nodes (Max capped)
+	entriesPerBucket = 20 // (Also known as k-bucket in kademlia literature)
+	// Max number of nodes a node can respond to
+	// find-node query
+	alphaNodes = 7
 )
 
 // Represents a node in the distributed

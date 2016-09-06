@@ -42,12 +42,6 @@ func MsgType2Str(mtype uint32) string {
 	}
 }
 
-const (
-	// Max limit on the number of nodes a remote node can send
-	// in a node reply message
-	kNodes = 7
-)
-
 type Ipv4Addr struct {
 	IP   [4]byte
 	Port uint16
