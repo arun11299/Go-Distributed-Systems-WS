@@ -214,13 +214,13 @@ func NewFindValueRequest(sender_id, lookup_id NodeId) *FindValueRequest {
  * NewFindNodeReply : Create a new Find node reply message.
  * Parameters:
  * [in] sender_id : Node Id of the sending node.
- * [in] nodes : The 'k' (atmax kNodes) close nodes
+ * [in] nodes : The 'k' (atmax alphaNodes) close nodes
  * [in] find_node_req : The corresponding FindNodeRequest
  * [out] *FindNodeReply : Pointer to the newly created FindNodeReply
  */
 func NewFindNodeReply(sender_id NodeId, nodes []RemoteNode,
 	find_node_req *FindNodeRequest) *FindNodeReply {
-	if len(nodes) > kNodes {
+	if len(nodes) > alphaNodes {
 		fmt.Println("ERROR: More than allowed nodes present: ", len(nodes))
 		return nil
 	}

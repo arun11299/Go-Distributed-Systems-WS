@@ -42,11 +42,11 @@ func commonBits(a, b NodeId) int {
 		}
 	}
 	// matching bytes mutiplied by bits per bytes
-	common_bits = i * 8
-	if common_bits == bytesPerNodeiId*8 {
-		return common_bits
+	if i == bytesPerNodeiId {
+		return bytesPerNodeiId * 8
 	}
 
+	common_bits = i * 8
 	// Now find if there are any matching bits
 	// at the ith index byte which didnt compare
 	// wholly
@@ -58,10 +58,7 @@ func commonBits(a, b NodeId) int {
 	}
 	common_bits += j
 
-	if common_bits == 0 {
-		return 0
-	}
-	return common_bits - 1
+	return common_bits
 }
 
 // Compares 2 node Id's
@@ -73,6 +70,13 @@ func Compare(a, b NodeId) bool {
 		return true
 	}
 	return false
+}
+
+func Xor(a, b NodeId) (res NodeId) {
+	for i := 0; i < bytesPerNodeiId; i++ {
+		res[i] = a[i] ^ b[i]
+	}
+	return res
 }
 
 func toString(a NodeId) string {
